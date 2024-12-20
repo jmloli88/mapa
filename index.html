@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         :root {
@@ -185,6 +186,29 @@
                 padding: 1rem;
             }
         }
+
+        .no-associates {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .no-associates p {
+            font-size: 16px;
+            color: #555;
+        }
+        .contact-button {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 10px 20px;
+            background-color: #25d366;
+            color: white;
+            text-decoration: none;
+            font-size: 16px;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        .contact-button:hover {
+            background-color: #1da354;
+        }
     </style>
 </head>
 <body>
@@ -290,7 +314,7 @@
         }
 
         function calculateDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371;
+            const R = 6371; // Radio de la Tierra en km
             const dLat = (lat2 - lat1) * Math.PI / 180;
             const dLon = (lon2 - lon1) * Math.PI / 180;
             const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
@@ -311,7 +335,10 @@
                 };
             });
 
-            return associates.sort((a, b) => a.distance - b.distance).slice(0, 5);
+            // Filtrar asociados dentro de los 100 km
+            const filteredAssociates = associates.filter(associate => associate.distance <= 100);
+            
+            return filteredAssociates.sort((a, b) => a.distance - b.distance).slice(0, 5);
         }
 
         function displayAssociates(associates) {
@@ -320,6 +347,22 @@
 
             const results = document.getElementById('nearestAssociates');
             results.innerHTML = '';
+
+            if (associates.length === 0) {
+                Swal.fire({
+                    icon: 'info',
+                    title: 'Associados não encontrados',
+                    html: `
+                        Não há associados próximos ao local selecionado. 
+                        <br>Mas você pode entrar em contato conosco através do botão a seguir.:<br>
+                        <a href="https://wa.me/5511934646702" target="_blank" 
+                            style="display: inline-flex; align-items: center; gap: 5px; margin-top: 10px; padding: 10px 20px; background: #25D366; color: white; text-decoration: none; border-radius: 5px; font-size: 16px; font-weight: bold;">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" alt="WhatsApp" style="width: 20px; height: 20px;">
+                            WhatsApp
+                        </a>
+                    `
+                });
+            }
 
             associates.forEach((associate, index) => {
                 const marker = L.marker([associate.latitude, associate.longitude], { icon: associateIcon }).addTo(map);
@@ -374,11 +417,6 @@
                     </div>
                 `;
             });
-        }
-
-        function openGoogleMaps(lat, lng) {
-            const url = `https://www.google.com/maps?q=${lat},${lng}`;
-            window.open(url, '_blank');
         }
     </script>
 </body>
