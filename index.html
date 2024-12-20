@@ -326,94 +326,97 @@ button:hover {
     }
 
     async function findNearestAssociate(latitude, longitude) {
-        try {
-            // Obtener todos los asociados de Firestore
-            const snapshot = await db.collection('associates').get();
-            
-            if (snapshot.empty) {
-                showError('Nenhum parceiro encontrado na sua região.');
-                return;
-            }
-
-            // Procesar los datos y calcular distancias
-            const associates = snapshot.docs.map(doc => {
-                const data = doc.data();
-                return {
-                    id: doc.id,
-                    ...data,
-                    distance: calculateDistance(
-                        latitude,
-                        longitude,
-                        data.latitude,
-                        data.longitude
-                    )
-                };
-            }).sort((a, b) => a.distance - b.distance);
-
-            const bounds = new google.maps.LatLngBounds();
-            let html = '';
-            
-            associates.forEach((associate, index) => {
-    html += `
-        <div class="associate-card">
-            <h3>${index + 1}. ${associate.name}</h3>
-            <div class="associate-info">
-                <p><strong>Endereço:</strong> ${associate.address}</p>
-                <span class="distance-badge">
-                    ${associate.distance.toFixed(2)} km de distância
-                </span>
-                <button 
-                    onclick="window.open('https://www.google.com/maps?q=${associate.latitude},${associate.longitude}', '_blank')"
-                    style="margin-top: 10px; padding: 10px 15px; background-color: #3498db; color: #fff; border: none; border-radius: 5px; cursor: pointer;"
-                >
-                    Abrir no Google Maps
-                </button>
-            </div>
-        </div>
-    `;
-
-    const associateMarker = new google.maps.Marker({
-        map: map,
-        position: { 
-            lat: parseFloat(associate.latitude), 
-            lng: parseFloat(associate.longitude)
-        },
-        title: associate.name,
-        label: {
-            text: (index + 1).toString(),
-            color: '#FFFFFF',
-            fontSize: '14px',
-            fontWeight: 'bold'
+    try {
+        // Obtener todos los asociados de Firestore
+        const snapshot = await db.collection('associates').get();
+        
+        if (snapshot.empty) {
+            showError('Nenhum parceiro encontrado na sua região.');
+            return;
         }
-    });
 
-    markers.push(associateMarker);
-    bounds.extend(associateMarker.getPosition());
+        // Procesar los datos y calcular distancias
+        const associates = snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                ...data,
+                distance: calculateDistance(
+                    latitude,
+                    longitude,
+                    data.latitude,
+                    data.longitude
+                )
+            };
+        }).sort((a, b) => a.distance - b.distance);
 
-    const infoWindow = new google.maps.InfoWindow({
-        content: `
-            <div class="info-window-content">
-                <h3>${associate.name}</h3>
-                <p><strong>Endereço:</strong> ${associate.address}</p>
-                <p><strong>Distância:</strong> ${associate.distance.toFixed(2)} km</p>
-            </div>
-        `
-    });
+        // Limitar a los 5 primeros asociados más cercanos
+        const closestAssociates = associates.slice(0, 5);
 
-    associateMarker.addListener('click', () => {
-        infoWindow.open(map, associateMarker);
-    });
-});
+        const bounds = new google.maps.LatLngBounds();
+        let html = '';
+        
+        closestAssociates.forEach((associate, index) => {
+            html += `
+                <div class="associate-card">
+                    <h3>${index + 1}. ${associate.name}</h3>
+                    <div class="associate-info">
+                        <p><strong>Endereço:</strong> ${associate.address}</p>
+                        <span class="distance-badge">
+                            ${associate.distance.toFixed(2)} km de distância
+                        </span>
+                        <button 
+                            onclick="window.open('https://www.google.com/maps?q=${associate.latitude},${associate.longitude}', '_blank')"
+                            style="margin-top: 10px; padding: 10px 15px; background-color: #3498db; color: #fff; border: none; border-radius: 5px; cursor: pointer;"
+                        >
+                            Abrir no Google Maps
+                        </button>
+                    </div>
+                </div>
+            `;
 
-            document.getElementById('nearestAssociates').innerHTML = html;
-            bounds.extend(map.getCenter());
-            map.fitBounds(bounds);
+            const associateMarker = new google.maps.Marker({
+                map: map,
+                position: { 
+                    lat: parseFloat(associate.latitude), 
+                    lng: parseFloat(associate.longitude)
+                },
+                title: associate.name,
+                label: {
+                    text: (index + 1).toString(),
+                    color: '#FFFFFF',
+                    fontSize: '14px',
+                    fontWeight: 'bold'
+                }
+            });
 
-        } catch (error) {
-            console.error('Error:', error);
-            showError('Ocorreu um erro ao procurar os parceiros mais próximos.');
-        }
+            markers.push(associateMarker);
+            bounds.extend(associateMarker.getPosition());
+
+            const infoWindow = new google.maps.InfoWindow({
+                content: `
+                    <div class="info-window-content">
+                        <h3>${associate.name}</h3>
+                        <p><strong>Endereço:</strong> ${associate.address}</p>
+                        <p><strong>Distância:</strong> ${associate.distance.toFixed(2)} km</p>
+                    </div>
+                `
+            });
+
+            associateMarker.addListener('click', () => {
+                infoWindow.open(map, associateMarker);
+            });
+        });
+
+        document.getElementById('nearestAssociates').innerHTML = html;
+        bounds.extend(map.getCenter());
+        map.fitBounds(bounds);
+
+    } catch (error) {
+        console.error('Error:', error);
+        showError('Ocorreu um erro ao procurar os parceiros mais próximos.');
     }
+}
 
     window.onload = initMap;
     </script>
