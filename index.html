@@ -94,12 +94,17 @@
         }
 
         .associate-card {
-            background: #fff;
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-        }
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 20px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin: 10px;
+    width: 300px; /* Ajusta el tamaño de la tarjeta si es necesario */
+}
 
         .associate-card:hover {
             transform: translateY(-2px);
@@ -115,10 +120,28 @@
         }
 
         .associate-info {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-top: 10px;
+}
+
+button {
+    display: block;
+    width: 100%;
+    padding: 10px 15px;
+    background-color: #3498db;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-top: 10px;
+    text-align: center;
+}
+button:hover {
+    background-color: #2980b9;
+}
 
         .associate-info p {
             margin: 0;
@@ -331,50 +354,56 @@
             let html = '';
             
             associates.forEach((associate, index) => {
-                html += `
-                    <div class="associate-card">
-                        <h3>${index + 1}. ${associate.name}</h3>
-                        <div class="associate-info">
-                            <p><strong>Endereço:</strong> ${associate.address}</p>
-                            <span class="distance-badge">
-                                ${associate.distance.toFixed(2)} km de distância
-                            </span>
-                        </div>
-                    </div>
-                `;
+    html += `
+        <div class="associate-card">
+            <h3>${index + 1}. ${associate.name}</h3>
+            <div class="associate-info">
+                <p><strong>Endereço:</strong> ${associate.address}</p>
+                <span class="distance-badge">
+                    ${associate.distance.toFixed(2)} km de distância
+                </span>
+                <button 
+                    onclick="window.open('https://www.google.com/maps?q=${associate.latitude},${associate.longitude}', '_blank')"
+                    style="margin-top: 10px; padding: 10px 15px; background-color: #3498db; color: #fff; border: none; border-radius: 5px; cursor: pointer;"
+                >
+                    Abrir no Google Maps
+                </button>
+            </div>
+        </div>
+    `;
 
-                const associateMarker = new google.maps.Marker({
-                    map: map,
-                    position: { 
-                        lat: parseFloat(associate.latitude), 
-                        lng: parseFloat(associate.longitude)
-                    },
-                    title: associate.name,
-                    label: {
-                        text: (index + 1).toString(),
-                        color: '#FFFFFF',
-                        fontSize: '14px',
-                        fontWeight: 'bold'
-                    }
-                });
+    const associateMarker = new google.maps.Marker({
+        map: map,
+        position: { 
+            lat: parseFloat(associate.latitude), 
+            lng: parseFloat(associate.longitude)
+        },
+        title: associate.name,
+        label: {
+            text: (index + 1).toString(),
+            color: '#FFFFFF',
+            fontSize: '14px',
+            fontWeight: 'bold'
+        }
+    });
 
-                markers.push(associateMarker);
-                bounds.extend(associateMarker.getPosition());
+    markers.push(associateMarker);
+    bounds.extend(associateMarker.getPosition());
 
-                const infoWindow = new google.maps.InfoWindow({
-                    content: `
-                        <div class="info-window-content">
-                            <h3>${associate.name}</h3>
-                            <p><strong>Endereço:</strong> ${associate.address}</p>
-                            <p><strong>Distância:</strong> ${associate.distance.toFixed(2)} km</p>
-                        </div>
-                    `
-                });
+    const infoWindow = new google.maps.InfoWindow({
+        content: `
+            <div class="info-window-content">
+                <h3>${associate.name}</h3>
+                <p><strong>Endereço:</strong> ${associate.address}</p>
+                <p><strong>Distância:</strong> ${associate.distance.toFixed(2)} km</p>
+            </div>
+        `
+    });
 
-                associateMarker.addListener('click', () => {
-                    infoWindow.open(map, associateMarker);
-                });
-            });
+    associateMarker.addListener('click', () => {
+        infoWindow.open(map, associateMarker);
+    });
+});
 
             document.getElementById('nearestAssociates').innerHTML = html;
             bounds.extend(map.getCenter());
