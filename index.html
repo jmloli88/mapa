@@ -1,424 +1,385 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Encontre os parceiros mais próximos</title>
-    <!-- Google Maps API -->
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA0jDAmm5EuSoKji7YBtu2SKOmmdkF3jcg&libraries=places"></script>
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <!-- Firebase -->
+    <title>Mapa de Asociados</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        /* Los estilos se mantienen igual... */
+        :root {
+            --primary-color: #2563eb;
+            --hover-color: #1d4ed8;
+            --background-color: #f8fafc;
+            --card-background: #ffffff;
+            --text-color: #1f2937;
+            --border-color: #e5e7eb;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Inter', sans-serif;
         }
 
         body {
-            background-color: #f5f5f5;
-            color: #333;
-            line-height: 1.6;
+            margin: 0;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.5;
+        }
+
+        #map {
+            height: 60vh;
+            width: 100%;
+            box-shadow: var(--shadow);
+            z-index: 1;
         }
 
         .container {
             max-width: 1200px;
             margin: 0 auto;
-            padding: 20px;
-        }
-
-        .header {
-            background-color: #ffffff;
-            padding: 20px 0;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin-bottom: 30px;
-        }
-
-        .header h1 {
-            font-size: 24px;
-            color: #2c3e50;
-            text-align: center;
-            font-weight: 600;
+            padding: 1.5rem;
         }
 
         .search-section {
-            background: #fff;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-        }
-
-        #locationForm {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
+            margin: -2rem auto 2rem;
+            position: relative;
+            z-index: 2;
+            max-width: 600px;
+            padding: 0 1rem;
         }
 
         #addressInput {
-            flex: 1;
-            padding: 12px 15px;
-            border: 2px solid #e1e1e1;
-            border-radius: 6px;
-            font-size: 16px;
-            transition: border-color 0.3s ease;
+            width: 100%;
+            padding: 1rem 1.5rem;
+            font-size: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 9999px;
+            box-shadow: var(--shadow);
+            background-color: var(--card-background);
+            transition: all 0.3s ease;
         }
 
         #addressInput:focus {
-            border-color: #3498db;
             outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
         }
 
-        .hidden-inputs {
-            display: none;
-        }
-
-        #map {
-            height: 500px;
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin-bottom: 30px;
+        #addressInput::placeholder {
+            color: #9ca3af;
         }
 
         .results-section {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-            margin-top: 30px;
+            gap: 1rem;
+            margin-top: 1rem;
         }
 
         .associate-card {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    justify-content: space-between;
-    padding: 20px;
-    background-color: #fff;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    margin: 10px;
-    width: 300px; /* Ajusta el tamaño de la tarjeta si es necesario */
-}
+            background-color: var(--card-background);
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            transition: transform 0.2s ease;
+        }
 
         .associate-card:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
         }
 
         .associate-card h3 {
-            color: #2c3e50;
-            font-size: 18px;
-            margin-bottom: 10px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #f0f0f0;
+            color: var(--text-color);
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
         }
 
         .associate-info {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    justify-content: space-between;
-    margin-top: 10px;
-}
+            display: grid;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
 
-button {
-    display: block;
-    width: 100%;
-    padding: 10px 15px;
-    background-color: #3498db;
-    color: #fff;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    margin-top: 10px;
-    text-align: center;
-}
-button:hover {
-    background-color: #2980b9;
-}
+        .info-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #4b5563;
+        }
 
-        .associate-info p {
+        .info-item i {
+            color: var(--primary-color);
+            width: 20px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 9999px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .button:hover {
+            background-color: var(--hover-color);
+        }
+
+        .button i {
+            font-size: 1rem;
+        }
+
+        .leaflet-popup-content-wrapper {
+            padding: 1rem;
+            border-radius: 12px;
+        }
+
+        .leaflet-popup-content {
             margin: 0;
-            color: #666;
+            min-width: 200px;
         }
 
-        .associate-info strong {
-            color: #2c3e50;
+        .popup-content {
+            display: grid;
+            gap: 0.75rem;
         }
 
-        .distance-badge {
-            display: inline-block;
-            background: #e8f5e9;
-            color: #2e7d32;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 14px;
-            margin-top: 10px;
+        .popup-content h3 {
+            color: var(--text-color);
+            font-size: 1.125rem;
+            margin: 0;
         }
 
-        .loading {
-            text-align: center;
-            padding: 20px;
-            color: #666;
+        .popup-info {
+            display: grid;
+            gap: 0.5rem;
         }
 
         @media (max-width: 768px) {
             .container {
-                padding: 10px;
-            }
-
-            .header h1 {
-                font-size: 20px;
+                padding: 1rem;
             }
 
             #map {
-                height: 400px;
+                height: 50vh;
             }
 
             .associate-card {
-                margin: 10px 0;
+                padding: 1rem;
             }
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>Encontre os parceiros mais próximos</h1>
-    </div>
-
+    <div id="map"></div>
     <div class="container">
         <div class="search-section">
-            <form id="locationForm">
-                <input 
-                    type="text" 
-                    id="addressInput" 
-                    placeholder="Digite seu endereço para encontrar parceiros próximos"
-                    autocomplete="off"
-                >
-                <div class="hidden-inputs">
-                    <input type="text" id="latitude" name="latitude">
-                    <input type="text" id="longitude" name="longitude">
-                </div>
-            </form>
+            <input 
+                type="text" 
+                id="addressInput" 
+                placeholder="🔍 Escribe tu dirección o selecciona en el mapa"
+            >
         </div>
-
-        <div id="map"></div>
-        
         <div id="nearestAssociates" class="results-section"></div>
     </div>
 
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-    // Configuración de Firebase
-    const firebaseConfig = {
-        apiKey: "AIzaSyAsoXFRhg50hPNgx9DIAE4NuCYdoUGEVbc",
-        authDomain: "sistemalaudos-d4460.firebaseapp.com",
-        projectId: "sistemalaudos-d4460",
-        storageBucket: "sistemalaudos-d4460.appspot.com",
-        messagingSenderId: "286566199960",
-        appId: "1:286566199960:web:1c1144e3b841413f08d6ed"
-    };
+        const firebaseConfig = {
+            apiKey: "AIzaSyAsoXFRhg50hPNgx9DIAE4NuCYdoUGEVbc",
+            authDomain: "sistemalaudos-d4460.firebaseapp.com",
+            projectId: "sistemalaudos-d4460",
+            storageBucket: "sistemalaudos-d4460.appspot.com",
+            messagingSenderId: "286566199960",
+            appId: "1:286566199960:web:1c1144e3b841413f08d6ed"
+        };
 
-    // Inicializar Firebase
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
 
-    let map;
-    let markers = [];
+        const map = L.map('map').setView([-23.55052, -46.633308], 12);
 
-    function initMap() {
-        map = new google.maps.Map(document.getElementById('map'), {
-            center: { lat: -23.550520, lng: -46.633308 }, // São Paulo
-            zoom: 12,
-            styles: [
-                {
-                    "featureType": "administrative",
-                    "elementType": "geometry",
-                    "stylers": [{"visibility": "off"}]
-                },
-                {
-                    "featureType": "poi",
-                    "stylers": [{"visibility": "off"}]
-                },
-                {
-                    "featureType": "road",
-                    "elementType": "labels.icon",
-                    "stylers": [{"visibility": "off"}]
-                },
-                {
-                    "featureType": "transit",
-                    "stylers": [{"visibility": "off"}]
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
+            subdomains: 'abcd',
+            maxZoom: 19
+        }).addTo(map);
+
+        let userMarker;
+        let associateMarkers = [];
+
+        const userIcon = L.icon({
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowSize: [41, 41]
+        });
+
+        const associateIcon = L.icon({
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowSize: [41, 41]
+        });
+
+        map.on('click', async (e) => {
+            const { lat, lng } = e.latlng;
+            setUserMarker(lat, lng);
+        });
+
+        document.getElementById('addressInput').addEventListener('keypress', async (e) => {
+            if (e.key === 'Enter') {
+                const address = e.target.value;
+                const coordinates = await geocodeAddress(address);
+                if (coordinates) {
+                    setUserMarker(coordinates.lat, coordinates.lng);
+                    map.setView([coordinates.lat, coordinates.lng], 14);
+                } else {
+                    alert('Dirección no encontrada. Intente nuevamente.');
                 }
-            ]
-        });
-
-        const addressInput = document.getElementById('addressInput');
-        const autocomplete = new google.maps.places.Autocomplete(addressInput);
-        
-        autocomplete.addListener('place_changed', function() {
-            const place = autocomplete.getPlace();
-            
-            if (!place.geometry) {
-                showError('Nenhum detalhe foi encontrado para este endereço');
-                return;
             }
-
-            clearMarkers();
-
-            map.setCenter(place.geometry.location);
-            map.setZoom(15);
-
-            const clientMarker = new google.maps.Marker({
-                map: map,
-                position: place.geometry.location,
-                title: 'Sua localização',
-                icon: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png'
-            });
-            markers.push(clientMarker);
-
-            document.getElementById('latitude').value = place.geometry.location.lat();
-            document.getElementById('longitude').value = place.geometry.location.lng();
-
-            showLoading();
-            findNearestAssociate(
-                place.geometry.location.lat(), 
-                place.geometry.location.lng()
-            );
         });
-    }
 
-    function showLoading() {
-        document.getElementById('nearestAssociates').innerHTML = `
-            <div class="loading">
-                <p>Buscando parceiros próximos...</p>
-            </div>
-        `;
-    }
-
-    function showError(message) {
-        document.getElementById('nearestAssociates').innerHTML = `
-            <div class="error">
-                <p>${message}</p>
-            </div>
-        `;
-    }
-
-    function clearMarkers() {
-        markers.forEach(marker => marker.setMap(null));
-        markers = [];
-    }
-
-    function calculateDistance(lat1, lon1, lat2, lon2) {
-        const R = 6371; // Radio de la Tierra en km
-        const dLat = (lat2 - lat1) * Math.PI / 180;
-        const dLon = (lon2 - lon1) * Math.PI / 180;
-        const a = 
-            Math.sin(dLat/2) * Math.sin(dLat/2) +
-            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-            Math.sin(dLon/2) * Math.sin(dLon/2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        return R * c;
-    }
-
-    async function findNearestAssociate(latitude, longitude) {
-    try {
-        // Obtener todos los asociados de Firestore
-        const snapshot = await db.collection('associates').get();
-        
-        if (snapshot.empty) {
-            showError('Nenhum parceiro encontrado na sua região.');
-            return;
+        async function geocodeAddress(address) {
+            try {
+                const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`);
+                const data = await response.json();
+                if (data && data.length > 0) {
+                    return {
+                        lat: parseFloat(data[0].lat),
+                        lng: parseFloat(data[0].lon)
+                    };
+                }
+                return null;
+            } catch (error) {
+                console.error('Error al buscar dirección:', error);
+                return null;
+            }
         }
 
-        // Procesar los datos y calcular distancias
-        const associates = snapshot.docs.map(doc => {
-            const data = doc.data();
-            return {
-                id: doc.id,
-                ...data,
-                distance: calculateDistance(
-                    latitude,
-                    longitude,
-                    data.latitude,
-                    data.longitude
-                )
-            };
-        }).sort((a, b) => a.distance - b.distance);
+        async function setUserMarker(lat, lng) {
+            if (userMarker) {
+                map.removeLayer(userMarker);
+            }
 
-        // Limitar a los 5 primeros asociados más cercanos
-        const closestAssociates = associates.slice(0, 5);
+            userMarker = L.marker([lat, lng], { icon: userIcon }).addTo(map);
 
-        const bounds = new google.maps.LatLngBounds();
-        let html = '';
-        
-        closestAssociates.forEach((associate, index) => {
-            html += `
-                <div class="associate-card">
-                    <h3>${index + 1}. ${associate.name}</h3>
-                    <div class="associate-info">
-                        <p><strong>Endereço:</strong> ${associate.address}</p>
-                        <span class="distance-badge">
-                            ${associate.distance.toFixed(2)} km de distância
-                        </span>
-                        <button 
-                            onclick="window.open('https://www.google.com/maps?q=${associate.latitude},${associate.longitude}', '_blank')"
-                            style="margin-top: 10px; padding: 10px 15px; background-color: #3498db; color: #fff; border: none; border-radius: 5px; cursor: pointer;"
-                        >
-                            Abrir no Google Maps
+            const nearestAssociates = await findNearestAssociates(lat, lng);
+            displayAssociates(nearestAssociates);
+        }
+
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371;
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return R * c;
+        }
+
+        async function findNearestAssociates(userLat, userLng) {
+            const snapshot = await db.collection('associates').get();
+            const associates = snapshot.docs.map(doc => {
+                const data = doc.data();
+                return {
+                    id: doc.id,
+                    ...data,
+                    distance: calculateDistance(userLat, userLng, data.latitude, data.longitude)
+                };
+            });
+
+            return associates.sort((a, b) => a.distance - b.distance).slice(0, 5);
+        }
+
+        function displayAssociates(associates) {
+            associateMarkers.forEach(marker => map.removeLayer(marker));
+            associateMarkers = [];
+
+            const results = document.getElementById('nearestAssociates');
+            results.innerHTML = '';
+
+            associates.forEach((associate, index) => {
+                const marker = L.marker([associate.latitude, associate.longitude], { icon: associateIcon }).addTo(map);
+
+                const popupContent = `
+                    <div class="popup-content">
+                        <h3>${associate.name}</h3>
+                        <div class="popup-info">
+                            <div class="info-item">
+                                <i class="fas fa-map-marker-alt"></i>
+                                ${associate.address}
+                            </div>
+                            <div class="info-item">
+                                <i class="fas fa-road"></i>
+                                ${associate.distance.toFixed(2)} km
+                            </div>
+                        </div>
+                        <button class="button" onclick="openGoogleMaps(${associate.latitude}, ${associate.longitude})">
+                            <i class="fas fa-directions"></i>
+                            Ver ruta
                         </button>
                     </div>
-                </div>
-            `;
+                `;
 
-            const associateMarker = new google.maps.Marker({
-                map: map,
-                position: { 
-                    lat: parseFloat(associate.latitude), 
-                    lng: parseFloat(associate.longitude)
-                },
-                title: associate.name,
-                label: {
-                    text: (index + 1).toString(),
-                    color: '#FFFFFF',
-                    fontSize: '14px',
-                    fontWeight: 'bold'
-                }
-            });
+                marker.bindPopup(popupContent);
 
-            markers.push(associateMarker);
-            bounds.extend(associateMarker.getPosition());
+                marker.on('click', () => {
+                    marker.openPopup();
+                });
 
-            const infoWindow = new google.maps.InfoWindow({
-                content: `
-                    <div class="info-window-content">
-                        <h3>${associate.name}</h3>
-                        <p><strong>Endereço:</strong> ${associate.address}</p>
-                        <p><strong>Distância:</strong> ${associate.distance.toFixed(2)} km</p>
+                associateMarkers.push(marker);
+
+                results.innerHTML += `
+                    <div class="associate-card">
+                        <h3>${index + 1}. ${associate.name}</h3>
+                        <div class="associate-info">
+                            <div class="info-item">
+                                <i class="fas fa-map-marker-alt"></i>
+                                <span>${associate.address}</span>
+                            </div>
+                            <div class="info-item">
+                                <i class="fas fa-road"></i>
+                                <span>${associate.distance.toFixed(2)} km</span>
+                            </div>
+                        </div>
+                        <div class="button-group">
+                            <button class="button" onclick="openGoogleMaps(${associate.latitude}, ${associate.longitude})">
+                                <i class="fas fa-directions"></i>
+                                Ver ruta en Google Maps
+                            </button>
+                        </div>
                     </div>
-                `
+                `;
             });
+        }
 
-            associateMarker.addListener('click', () => {
-                infoWindow.open(map, associateMarker);
-            });
-        });
-
-        document.getElementById('nearestAssociates').innerHTML = html;
-        bounds.extend(map.getCenter());
-        map.fitBounds(bounds);
-
-    } catch (error) {
-        console.error('Error:', error);
-        showError('Ocorreu um erro ao procurar os parceiros mais próximos.');
-    }
-}
-
-    window.onload = initMap;
+        function openGoogleMaps(lat, lng) {
+            const url = `https://www.google.com/maps?q=${lat},${lng}`;
+            window.open(url, '_blank');
+        }
     </script>
 </body>
 </html>
